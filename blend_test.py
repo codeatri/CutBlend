@@ -1,12 +1,18 @@
 import glob
-
-import cv2
-import torch
-from PIL import Image
-import numpy as np
 import random
 
+import numpy as np
+from PIL import Image
+
+
 def rand_bbox(H, W, lam):
+    """
+    Randomly choosing bounding box within an image.
+    :param H: Height of the image
+    :param W: Width of the image
+    :param lam: lambda
+    :return: Indexes for the box to crop to blend
+    """
     cut_rat = np.sqrt(1. - lam)
     cut_w = np.int(W * cut_rat)
     cut_h = np.int(H * cut_rat)
@@ -22,7 +28,12 @@ def rand_bbox(H, W, lam):
 
     return bbx1, bby1, bbx2, bby2
 
+
 def main():
+    """
+    This runs blending logic required for CutBlend Data Augmentation Algorithm.
+    :return:
+    """
     image_list = []
     for filename in glob.glob('data/input_training_highres/*.png'):
         im = Image.open(filename).resize((500, 500))
@@ -35,9 +46,9 @@ def main():
         rgbimg.paste(im)
         alpha_list.append(rgbimg)
 
-
     for i, image in enumerate(image_list):
-        rand_index = 4
+        # Load Images
+        rand_index = random.randint(0, len(image_list)-1)
         foreground = np.array(image_list[rand_index])
         background = np.array(image)
         result = np.copy(background)
@@ -48,17 +59,14 @@ def main():
         bbx1, bby1, bbx2, bby2 = rand_bbox(background.shape[1], background.shape[0], lam)
         alpha = mask[bbx1:bbx2, bby1:bby2, :]
 
-        alpha_list[rand_index].show()
-        Image.fromarray(foreground).show()
-        Image.fromarray(background).show()
-
+        # Alpha Masking
         foreground = np.multiply(foreground[bbx1:bbx2, bby1:bby2, :], alpha)
         background = np.multiply(background[bbx1:bbx2, bby1:bby2, :], 1 - alpha)
         result[bbx1:bbx2, bby1:bby2, :] = np.add(foreground, background)
 
         # Display image
         Image.fromarray(result).show()
-        break
+
 
 if __name__ == '__main__':
     main()
